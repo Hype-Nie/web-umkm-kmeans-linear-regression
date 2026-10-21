@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'required' => ':attribute wajib diisi.',
+    'accepted' => ':attribute harus disetujui.',
+    'unique' => ':attribute sudah digunakan.',
+    'confirmed' => 'Konfirmasi :attribute tidak sesuai.',
+    'email' => ':attribute harus berupa alamat email yang valid.',
+    'string' => ':attribute harus berupa teks.',
+    'integer' => ':attribute harus berupa bilangan bulat.',
+    'numeric' => ':attribute harus berupa angka.',
+    'boolean' => ':attribute tidak valid.',
+    'date' => ':attribute bukan tanggal yang valid.',
+    'date_format' => ':attribute harus menggunakan format :format.',
+    'after_or_equal' => ':attribute harus sama atau setelah :date.',
+    'before_or_equal' => ':attribute harus sama atau sebelum :date.',
+    'in' => 'Pilihan :attribute tidak valid.',
+    'regex' => 'Format :attribute tidak valid.',
+    'alpha_dash' => ':attribute hanya boleh berisi huruf, angka, tanda hubung, atau garis bawah.',
+    'file' => ':attribute harus berupa berkas.',
+    'mimes' => ':attribute harus berformat :values.',
+    'max' => ['string' => ':attribute maksimal :max karakter.', 'numeric' => ':attribute maksimal :max.', 'file' => ':attribute maksimal :max KB.', 'array' => ':attribute maksimal :max elemen.'],
+    'min' => ['string' => ':attribute minimal :min karakter.', 'numeric' => ':attribute minimal :min.', 'file' => ':attribute minimal :min KB.', 'array' => ':attribute minimal :min elemen.'],
+    'password' => ['letters' => ':attribute harus mengandung huruf.', 'numbers' => ':attribute harus mengandung angka.'],
+    'attributes' => ['nama_pemilik' => 'Nama pemilik', 'nama_toko' => 'Nama toko', 'username' => 'Username', 'email' => 'Email', 'password' => 'Kata sandi', 'terms' => 'Ketentuan penggunaan', 'identity' => 'Email/username', 'kode_barang' => 'Kode barang', 'nama_barang' => 'Nama barang', 'harga_satuan' => 'Harga jual', 'harga_beli' => 'Harga beli', 'stok_minimum' => 'Stok minimum', 'tanggal_transaksi' => 'Tanggal transaksi', 'jumlah_terjual' => 'Jumlah terjual', 'harga_satuan_jual' => 'Harga satuan jual', 'tanggal_update' => 'Tanggal pembaruan', 'jumlah' => 'Jumlah unit', 'file' => 'Berkas', 'mulai' => 'Tanggal mulai', 'akhir' => 'Tanggal akhir', 'confirmed' => 'Persetujuan konfirmasi'],
+];
