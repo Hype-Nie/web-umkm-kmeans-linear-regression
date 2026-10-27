@@ -126,14 +126,16 @@ class UdZufriRealDataSeeder extends Seeder
         $this->command?->info("Menyimpan 52 produk master...");
         $dbProducts = [];
         foreach ($productsData as $kode => $pInfo) {
-            $cl = $clusterMap[$pInfo['nama_barang']]['cluster'] ?? 'cluster_2';
+            $cl = $clusterMap[$pInfo['nama_barang']]['cluster']
+                ?? ($pInfo['total_terjual'] >= 3000 ? 'cluster_0' : ($pInfo['total_terjual'] >= 1200 ? 'cluster_1' : 'cluster_2'));
+            $hashOffset = abs(crc32($kode));
             $stokMin = match ($cl) {
-                'cluster_0' => 100,
-                'cluster_1' => 50,
-                default => 15,
+                'cluster_0' => 80 + ($hashOffset % 35),
+                'cluster_1' => 35 + ($hashOffset % 25),
+                default => 10 + ($hashOffset % 12),
             };
 
-            $product = Barang::firstOrCreate(
+            $product = Barang::updateOrCreate(
                 ['id_user' => $user->id_user, 'kode_barang' => $kode],
                 [
                     'nama_barang' => $pInfo['nama_barang'],
@@ -145,14 +147,14 @@ class UdZufriRealDataSeeder extends Seeder
             );
             $dbProducts[$kode] = $product;
 
-            // Snapshot stok terkini
+            // Snapshot stok terkini yang bervariasi secara realistis per komoditas
             $sisaStok = match ($cl) {
-                'cluster_0' => 45,  // Fast moving kritis -> butuh restok tinggi
-                'cluster_1' => 55,  // Medium moving pas
-                default => 120,     // Slow moving berlebih -> rekomendasi promo
+                'cluster_0' => 35 + ($hashOffset % 130), // Fast moving -> kombinasi restok prioritas tinggi & sedang
+                'cluster_1' => 40 + ($hashOffset % 45),  // Medium moving
+                default => 18 + ($hashOffset % 75),      // Slow moving berlebih -> rekomendasi evaluasi promosi
             };
 
-            StokBarang::firstOrCreate(
+            StokBarang::updateOrCreate(
                 [
                     'id_barang' => $product->id_barang,
                     'tanggal_update' => '2026-06-30 23:59:59',

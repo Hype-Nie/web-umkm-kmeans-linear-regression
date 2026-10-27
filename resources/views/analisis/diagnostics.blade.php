@@ -70,16 +70,83 @@
         </form>
     </div>
     <div class="table-wrap">
+        @php
+            $periodMonths = ($process?->tanggal_mulai_data && $process?->tanggal_akhir_data)
+                ? max(1, (int) $process->tanggal_mulai_data->copy()->startOfMonth()->diffInMonths($process->tanggal_akhir_data->copy()->startOfMonth()) + 1)
+                : 1;
+        @endphp
         <table class="table">
-            <thead><tr><th>Kategori Produk</th><th>Jumlah Produk</th><th>Unit Terjual</th><th>Frekuensi Pembelian</th><th>Distribusi Klaster</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>KATEGORI PRODUK</th>
+                    <th>KLASTER</th>
+                    <th>TURNOVER RATE</th>
+                    <th style="text-align: right;">NILAI STOK (RP)</th>
+                    <th style="text-align: center;">STATUS</th>
+                </tr>
+            </thead>
             <tbody>
                 @forelse ($categoryMetrics as $category => $group)
+                    @php
+                        $dominantCluster = $group->groupBy('label_klaster')
+                            ->sortByDesc(fn ($items) => ($items->sum('fitur_jumlah_terjual') * 1000) + $items->count())
+                            ->keys()
+                            ->first() ?? 'Cukup';
+                        $clusterBadge = match ($dominantCluster) {
+                            'Sangat Laris' => 'badge-success',
+                            'Cukup', 'Cukup Laris' => 'badge-primary',
+                            default => 'badge-warning',
+                        };
+
+                        $totalSold = (int) $group->sum('fitur_jumlah_terjual');
+                        $totalStock = (int) $group->sum(fn ($c) => (int) ($c->barang->stokTerakhir?->sisa_stok ?? 0));
+                        $totalMinStock = (int) $group->sum(fn ($c) => max(1, (int) ($c->barang->stok_minimum ?? 1)));
+                        $avgInventory = max(1.0, $totalStock > 0 ? ($totalStock + $totalMinStock) / 2 : $totalMinStock);
+                        $turnoverRate = ($totalSold / $periodMonths) / $avgInventory;
+                        if ($totalSold > 0 && $turnoverRate < 0.1) {
+                            $turnoverRate = 0.1;
+                        }
+
+                        $stockValue = $group->sum(function ($c) {
+                            $sisa = (int) ($c->barang->stokTerakhir?->sisa_stok ?? 0);
+                            $harga = (float) ($c->barang->harga_satuan ?? 0);
+                            return $sisa * $harga;
+                        });
+
+                        if ($totalStock <= $totalMinStock) {
+                            $statusLabel = 'Perlu Restock';
+                            $statusBadge = 'badge-danger';
+                        } elseif ($dominantCluster === 'Sangat Laris' || $turnoverRate >= 1.5) {
+                            $statusLabel = 'Optimal';
+                            $statusBadge = 'badge-success';
+                        } elseif ($dominantCluster === 'Cukup' || $turnoverRate >= 0.8) {
+                            $statusLabel = 'Stabil';
+                            $statusBadge = 'badge-info';
+                        } elseif ($totalStock > ($totalMinStock * 2)) {
+                            $statusLabel = 'Stok Berlebih';
+                            $statusBadge = 'badge-warning';
+                        } else {
+                            $statusLabel = 'Perputaran Lambat';
+                            $statusBadge = 'badge-warning';
+                        }
+                    @endphp
                     <tr>
-                        <td><strong>{{ $category }}</strong></td>
-                        <td>{{ $group->count() }} produk</td>
-                        <td>{{ number_format($group->sum('fitur_jumlah_terjual'), 0, ',', '.') }}</td>
-                        <td>{{ number_format($group->sum('fitur_frekuensi_pembelian'), 0, ',', '.') }}</td>
-                        <td><div class="category-badges">@foreach ($group->countBy('label_klaster') as $label => $count)<span class="badge {{ $label === 'Sangat Laris' ? 'badge-success' : ($label === 'Cukup' ? 'badge-primary' : 'badge-warning') }}">{{ $label }} · {{ $count }}</span>@endforeach</div></td>
+                        <td>
+                            <strong>{{ $category }}</strong>
+                            <small class="d-block muted">{{ $group->count() }} produk</small>
+                        </td>
+                        <td>
+                            <span class="badge {{ $clusterBadge }}">{{ $dominantCluster }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ number_format($turnoverRate, 1, ',', '.') }}x</strong> <span class="muted">/ bln</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <strong>Rp {{ number_format($stockValue, 0, ',', '.') }}</strong>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="badge {{ $statusBadge }}">{{ $statusLabel }}</span>
+                        </td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="text-center muted">Tidak ada kategori yang sesuai dengan pencarian atau filter.</td></tr>
@@ -87,5 +154,5 @@
             </tbody>
         </table>
     </div>
-    <p class="form-help px-4 mt-2">Frekuensi merupakan jumlah kejadian pembelian per produk, bukan jumlah struk unik antarproduk.</p>
+    <p class="form-help px-4 mt-2">Turnover rate dihitung dari rasio rata-rata penjualan bulanan terhadap persediaan kategori, sedangkan nilai stok dihitung dari posisi sisa stok dikalikan harga satuan produk.</p>
 </section>

@@ -14,7 +14,7 @@ class AnalysisController extends Controller
     {
         $request->validate(['proses' => 'nullable|integer', 'kategori' => 'nullable|string|max:120', 'klaster' => 'nullable|in:Sangat Laris,Cukup,Kurang']);
         $process = $request->filled('proses') ? $request->user()->proses()->findOrFail($request->proses) : $request->user()->proses()->latest('id_proses')->first();
-        $clusters = $process?->klaster()->with('barang')->get() ?? collect();
+        $clusters = $process?->klaster()->with('barang.stokTerakhir')->get() ?? collect();
         $forecasts = $process?->prediksi()->with('barang')->get() ?? collect();
         $analyzedProducts = $clusters->pluck('barang')->merge($forecasts->pluck('barang'))->unique('id_barang')->values();
         $metadata = $process ? json_decode($process->catatan ?? '', true) : null;
