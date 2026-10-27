@@ -27,14 +27,19 @@ class UdZufriRealDataSeeder extends Seeder
 
     public function run(): void
     {
-        $csvPath = base_path('../../resources/transaksi_gabungan.csv');
+        $csvPath = database_path('data/transaksi_gabungan.csv');
         if (! file_exists($csvPath)) {
-            $csvPath = 'C:\\Users\\p\\Documents\\mercenary_work\\Oct\\12_spk-umkm-kmeans-dan-linear-regression\\resources\\transaksi_gabungan.csv';
+            $csvPath = base_path('../../resources/transaksi_gabungan.csv');
         }
 
-        $clusterCsvPath = base_path('../../finals/hasil_klaster_produk.csv');
+        $clusterCsvPath = database_path('data/hasil_klaster_produk.csv');
         if (! file_exists($clusterCsvPath)) {
-            $clusterCsvPath = 'C:\\Users\\p\\Documents\\mercenary_work\\Oct\\12_spk-umkm-kmeans-dan-linear-regression\\finals\\hasil_klaster_produk.csv';
+            $clusterCsvPath = base_path('../../finals/hasil_klaster_produk.csv');
+        }
+
+        if (! file_exists($csvPath)) {
+            $this->command?->error("File dataset transaksi tidak ditemukan di: {$csvPath}");
+            return;
         }
 
         $this->command?->info('Menyiapkan akun pemilik UD. Zufri...');
