@@ -49,6 +49,73 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 }
 
+/* Analysis, recommendation rows, and report configuration. */
+.analysis-details { border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
+.analysis-details > summary { padding: 18px 22px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ink); }
+.analysis-details[open] > summary { border-bottom: 1px solid var(--line); }
+.details-content { padding: 18px; }
+.details-content > .card { box-shadow: none; }
+.diagnostics-chart { height: 240px; }
+.diagnostics-empty { min-height: 180px; display: grid; place-content: center; color: var(--muted); text-align: center; }
+.category-metrics-head { flex-wrap: wrap; gap: 18px; }
+.category-filter { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.category-search { position: relative; }
+.category-search > .icon { position: absolute; left: 10px; top: 11px; color: var(--muted); width: 17px; height: 17px; }
+.category-search input { padding-left: 34px; max-width: 220px; }
+.category-filter-options { position: relative; }
+.category-filter-options > summary { list-style: none; }
+.category-filter-options > summary::-webkit-details-marker { display: none; }
+.category-filter-popover { position: absolute; z-index: 10; right: 0; top: 46px; min-width: 230px; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-md); }
+.category-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.rec-other-heading { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.rec-other-heading h2 { margin: 0; white-space: nowrap; }
+.rec-other-heading > span { flex: 1; height: 1px; background: var(--line); }
+.rec-other-row { border: 1px solid var(--line); background: #fff; margin-bottom: 8px; }
+.rec-other-row > summary { display: flex; align-items: center; gap: 18px; padding: 15px 18px; list-style: none; cursor: pointer; }
+.rec-other-row > summary::-webkit-details-marker { display: none; }
+.rec-other-copy { flex: 1; min-width: 0; }
+.rec-other-copy strong { display: block; color: var(--ink); font-size: 13px; }
+.rec-other-copy > span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.rec-other-confidence { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.rec-other-chevron { font-size: 24px; line-height: 1; color: var(--muted); transition: transform .15s; }
+.rec-other-row[open] .rec-other-chevron { transform: rotate(90deg); }
+.rec-other-body { border-top: 1px solid var(--line); padding: 16px 18px; }
+.rec-other-body .form-select { width: auto; }
+.rec-other-empty { padding: 18px; border: 1px solid var(--line); background: #fff; color: var(--muted); }
+.report-date-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.report-date-fields input { min-width: 0; padding-left: 8px; padding-right: 5px; font-size: 12px; width: 100%; }
+.report-format { border: 0; padding: 0; min-width: 0; }
+.report-format legend { float: none; width: auto; font-size: inherit; }
+.report-format-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.report-format-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.report-format-options label { border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; padding: 7px 8px; font-size: 12.5px; font-weight: 600; color: #0f172a; cursor: pointer; background: #fff; }
+.report-format-input:checked + label { color: #fff; background: var(--accent); border-color: var(--accent); }
+.report-format-input:focus-visible + label { outline: 3px solid var(--accent-border); outline-offset: 2px; }
+.report-options { display: grid; gap: 10px; margin: 18px 0 22px; }
+.report-options .form-check { display: flex; align-items: center; gap: 9px; padding-left: 0; margin: 0; font-size: 12.5px; font-weight: 500; color: #334155; cursor: pointer; }
+.report-options .form-check-input { margin: 0; float: none; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+.report-options .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.report-config-actions { display: grid; gap: 10px; }
+.report-info-note { display: flex; align-items: flex-start; gap: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 12px; line-height: 1.5; color: #64748b; }
+.report-info-note .icon { width: 18px; height: 18px; color: #0f172a; flex-shrink: 0; margin-top: 1px; }
+.report-config-actions .btn { min-height: 42px; }
+.report-viewport[aria-busy="true"] .paper { opacity: .6; }
+.raw-appendix .report-table th { background: #2563eb; color: #fff; }
+.raw-appendix .report-table td, .raw-appendix .report-table th { border: 1px solid #cbd5e1; padding: 4px; font-size: 8px; }
+@media (max-width: 640px) {
+    .category-filter { width: 100%; margin-left: 0; }
+    .category-search { flex: 1; }
+    .category-search input { max-width: none; }
+    .rec-other-row > summary { flex-wrap: wrap; gap: 10px; padding: 12px; }
+    .rec-other-copy { flex-basis: calc(100% - 95px); }
+    .rec-other-confidence { margin-left: auto; }
+    .details-content { padding: 10px; }
+}
+@media print {
+    .analysis-details > .details-content { display: block !important; }
+    .analysis-details { border: 0; }
+}
+
 * {
     box-sizing: border-box;
 }
@@ -1403,7 +1470,7 @@ select[data-searchable] {
 /* Cetak Laporan Drafting Stage */
 .report-layout {
     display: grid;
-    grid-template-columns: 270px minmax(0, 1fr);
+    grid-template-columns: 285px minmax(0, 1fr);
     gap: 24px;
 }
 
@@ -2418,8 +2485,8 @@ pre.metadata {
     }
 
     .chart-bar {
-        background-color: #000000 !important;
-        border: 1px solid #000000 !important;
+        background-color: #2563eb !important;
+        border: 1px solid #2563eb !important;
     }
 
     .summary-box, .report-summary-section {

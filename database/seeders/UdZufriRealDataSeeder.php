@@ -16,26 +16,26 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class UdZufriRealDataSeeder extends Seeder
 {
-    public const EMAIL = 'admin@udzufri.test';
+    public const EMAIL = 'admin@admin.com';
     public const USERNAME = 'admin_zufri';
-    public const PASSWORD = 'Password123!';
+    public const PASSWORD = 'password';
     public const OWNER = 'Halijah Yuhyi Pardede';
     public const STORE = 'UD. Zufri';
 
     public function run(): void
     {
-        $csvPath = base_path('../../resources/transaksi_gabungan.csv');
-        if (! file_exists($csvPath)) {
-            $csvPath = 'C:\\Users\\p\\Documents\\mercenary_work\\Oct\\12_spk-umkm-kmeans-dan-linear-regression\\resources\\transaksi_gabungan.csv';
+        $csvPath = resource_path('transaksi_gabungan.csv');
+        if (! is_readable($csvPath)) {
+            throw new RuntimeException(
+                'Berkas data transaksi tidak ditemukan atau tidak dapat dibaca: '.$csvPath
+            );
         }
 
-        $clusterCsvPath = base_path('../../finals/hasil_klaster_produk.csv');
-        if (! file_exists($clusterCsvPath)) {
-            $clusterCsvPath = 'C:\\Users\\p\\Documents\\mercenary_work\\Oct\\12_spk-umkm-kmeans-dan-linear-regression\\finals\\hasil_klaster_produk.csv';
-        }
+        $clusterCsvPath = base_path('finals/hasil_klaster_produk.csv');
 
         $this->command?->info('Menyiapkan akun pemilik UD. Zufri...');
         $user = User::firstOrCreate(
@@ -50,7 +50,7 @@ class UdZufriRealDataSeeder extends Seeder
 
         $this->command?->info('Membaca data RapidMiner klaster produk...');
         $clusterMap = [];
-        if (file_exists($clusterCsvPath)) {
+        if (is_readable($clusterCsvPath)) {
             $cfp = fopen($clusterCsvPath, 'r');
             fgetcsv($cfp, 0, ';'); // skip header
             while (($cRow = fgetcsv($cfp, 0, ';')) !== false) {
@@ -68,6 +68,9 @@ class UdZufriRealDataSeeder extends Seeder
 
         $this->command?->info('Membaca dan memproses 9.037 baris transaksi asli...');
         $fp = fopen($csvPath, 'r');
+        if ($fp === false) {
+            throw new RuntimeException('Berkas data transaksi tidak dapat dibuka: '.$csvPath);
+        }
         $headers = fgetcsv($fp);
         // Clean BOM if present
         $headers[0] = preg_replace('/[\x{FEFF}]/u', '', $headers[0]);

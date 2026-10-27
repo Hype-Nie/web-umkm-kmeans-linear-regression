@@ -188,7 +188,7 @@ class ImportService
                             if ($p->stok()->where('tanggal_update', $d['tanggal_update'])->where('sisa_stok', $d['sisa_stok'])->exists()) {
                                 throw new DomainException('Snapshot duplikat.');
                             }
-                            $p->stok()->create(['tanggal_update' => $d['tanggal_update'], 'sisa_stok' => $d['sisa_stok'], 'sumber_data' => 'impor', 'id_impor' => $history->id_impor, 'keterangan' => 'Snapshot historis; penjualan tidak dikurangi ulang.']);
+                            $p->stok()->create(['tanggal_update' => $d['tanggal_update'], 'sisa_stok' => $d['sisa_stok'], 'sumber_data' => 'impor', 'id_impor' => $history->id_impor, 'keterangan' => 'Snapshot historis, penjualan tidak dikurangi ulang.']);
                         }
                     });
                     $success++;
@@ -196,7 +196,7 @@ class ImportService
                     if (! $partial) {
                         throw $e;
                     }
-                    $errors[] = ['baris' => $entry['row'], 'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Gagal menyimpan baris; periksa konflik kode atau duplikasi.'];
+                    $errors[] = ['baris' => $entry['row'], 'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Gagal menyimpan baris, periksa konflik kode atau duplikasi.'];
                     if (! $e instanceof DomainException) {
                         report($e);
                     }

@@ -75,7 +75,7 @@
                             $barHeight = max(4, round((60 * (float) $value) / $chartMax));
                         @endphp
                         <td class="chart-bar-cell" style="vertical-align:bottom; text-align:center; padding:0 1px; border:none;" title="{{ $periodKey }}: {{ \App\Support\Money::format($value) }}">
-                            <div class="chart-bar" style="background-color:#000000; width:80%; max-width:24px; min-width:6px; margin:0 auto; height:{{ $barHeight }}px; border:1px solid #000000;"></div>
+                            <div class="chart-bar" style="background-color:#2563eb; width:80%; max-width:24px; min-width:6px; margin:0 auto; height:{{ $barHeight }}px; border:1px solid #2563eb;"></div>
                         </td>
                     @endforeach
                 </tr>
@@ -90,6 +90,7 @@
         </div>
     @endif
 
+    @if ($report['detail'] ?? true)
     <div class="table-section">
         <div style="font-size:9.5px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; color:#000000; margin-bottom:6px;">
             {{ $report['summary'] ? 'II.' : 'I.' }} Detail Data Laporan
@@ -104,7 +105,7 @@
 
         <table class="report-table" style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #000000;">
             <thead>
-                <tr style="background-color:#000000; color:#ffffff;">
+                <tr style="background-color:#2563eb; color:#ffffff;">
                     @foreach ($report['headers'] as $header)
                         <th style="padding:5px 6px; font-size:8px; font-weight:bold; text-align:left; border:1px solid #333333; text-transform:uppercase;">
                             {{ $header }}
@@ -150,6 +151,18 @@
         @endif
     </div>
 
+    @endif
+    @if ($report['raw'] ?? false)
+        <section class="raw-appendix">
+            <h2 style="font-size:11px; color:#2563eb;">Lampiran Data Mentah</h2>
+            <p style="font-size:8px;">Transaksi sumber pada periode terpilih, {{ count($report['raw_rows']) }} baris.</p>
+            <table class="report-table">
+                <thead><tr>@foreach ($report['raw_headers'] as $header)<th>{{ $header }}</th>@endforeach</tr></thead>
+                <tbody>@forelse (array_slice($report['raw_rows'], 0, 150) as $row)<tr>@foreach ($row as $cell)<td>{{ $cell }}</td>@endforeach</tr>@empty<tr><td colspan="9">Belum ada transaksi sumber pada periode ini.</td></tr>@endforelse</tbody>
+            </table>
+            @if (count($report['raw_rows']) > 150)<p class="form-help">Lampiran cetak menampilkan 150 baris pertama, unduh Excel atau CSV untuk seluruh data mentah.</p>@endif
+        </section>
+    @endif
     <!-- Lembar Pengesahan / Tanda Tangan Formal -->
     <table class="signature-table" style="width:100%; border:none; border-collapse:collapse; margin-top:20px; page-break-inside:avoid;">
         <tr>

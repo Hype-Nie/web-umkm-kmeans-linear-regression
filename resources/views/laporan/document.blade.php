@@ -94,10 +94,10 @@
         }
 
         .chart-bar {
-            background-color: #000000;
+            background-color: #2563eb;
             width: 80%;
             margin: 0 auto;
-            border: 1px solid #000000;
+            border: 1px solid #2563eb;
             border-radius: 2px 2px 0 0;
         }
 
@@ -118,7 +118,7 @@
         }
 
         .report-table th {
-            background-color: #000000;
+            background-color: #2563eb;
             color: #ffffff;
             font-size: 7.5px;
             font-weight: bold;

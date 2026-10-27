@@ -29,7 +29,7 @@ class SpreadsheetService
                 $rows[] = $row;
                 if (count($rows) > 25001) {
                     fclose($handle);
-                    throw new DomainException('Maksimal 25.000 baris per unggahan; pecah file menjadi beberapa bagian.');
+                    throw new DomainException('Maksimal 25.000 baris per unggahan, pecah file menjadi beberapa bagian.');
                 }
             }
             fclose($handle);
@@ -71,19 +71,25 @@ class SpreadsheetService
 
     public function download(array $headers, array $rows, string $name, string $format = 'xlsx', array $context = [])
     {
+        $rowCount = count($rows);
+        if ($context && ! ($context['detail'] ?? true)) {
+            $rows = [];
+        }
         if ($format === 'csv') {
             return response()->streamDownload(function () use ($headers, $rows, $context) {
                 $out = fopen('php://output', 'w');
                 fwrite($out, "\xEF\xBB\xBF");
-                $metadata = $context ? [['Laporan', $context['title']], ['Nama toko', $context['shop']], ['Periode', $context['start'].' s.d. '.$context['end']], ['Dibuat', $context['generated']], ['Total / catatan', $context['total']], []] : [];
-                foreach (array_merge($metadata, [$headers], $rows) as $row) {
+                $metadata = $context && ($context['summary'] ?? true) ? [['Laporan', $context['title']], ['Nama toko', $context['shop']], ['Periode', $context['start'].' s.d. '.$context['end']], ['Dibuat', $context['generated']], ['Total / catatan', $context['total']], []] : [];
+                $body = ! $context || ($context['detail'] ?? true) ? array_merge([$headers], $rows) : [];
+                $appendix = ($context['raw'] ?? false) ? array_merge([[], ['Lampiran Data Mentah'], $context['raw_headers']], $context['raw_rows']) : [];
+                foreach (array_merge($metadata, $body, $appendix) as $row) {
                     fputcsv($out, array_map(fn ($v) => is_string($v) && preg_match('/^(?:\s*[=+@\-]|[\t\r\n])/', $v) ? "'".$v : $v, $row));
                 }
                 fclose($out);
             }, $name.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
         }
 
-        return response()->streamDownload(function () use ($headers, $rows, $context) {
+        return response()->streamDownload(function () use ($headers, $rows, $context, $rowCount) {
             $book = new Spreadsheet;
             $sheet = $book->getActiveSheet();
             $sheet->setTitle('Data');
@@ -100,7 +106,7 @@ class SpreadsheetService
             }
             $last = Coordinate::stringFromColumnIndex(count($headers));
             $sheet->getStyle('A1:'.$last.'1')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
-            $sheet->getStyle('A1:'.$last.'1')->getFill()->setFillType('solid')->getStartColor()->setARGB('FF161616');
+            $sheet->getStyle('A1:'.$last.'1')->getFill()->setFillType('solid')->getStartColor()->setARGB('FF2563EB');
             $sheet->getRowDimension(1)->setRowHeight(28);
             $sheet->freezePane('A2');
             $sheet->setAutoFilter('A1:'.$last.max(1, count($rows) + 1));
@@ -109,10 +115,10 @@ class SpreadsheetService
             }
             $sheet->getStyle('A1:'.$last.max(1, count($rows) + 1))->getAlignment()->setWrapText(true);
             $sheet->setShowGridlines(false);
-            if ($context) {
+            if ($context && ($context['summary'] ?? true)) {
                 $summary = new Worksheet($book, 'Ringkasan');
                 $book->addSheet($summary, 0);
-                $meta = [[$context['title']], ['Nama Toko', $context['shop']], ['Pemilik', $context['owner']], ['Periode', $context['start'].' s.d. '.$context['end']], ['Dibuat (WIB)', $context['generated']], ['Total / Catatan', $context['total']], ['Jumlah Baris', count($rows)]];
+                $meta = [[$context['title']], ['Nama Toko', $context['shop']], ['Pemilik', $context['owner']], ['Periode', $context['start'].' s.d. '.$context['end']], ['Dibuat (WIB)', $context['generated']], ['Total / Catatan', $context['total']], ['Jumlah Baris', $rowCount]];
                 foreach ($meta as $i => $r) {
                     foreach ($r as $j => $v) {
                         $summary->setCellValueExplicit(Coordinate::stringFromColumnIndex($j + 1).($i + 1), $v, DataType::TYPE_STRING);
@@ -120,7 +126,7 @@ class SpreadsheetService
                 }
                 $summary->mergeCells('A1:M1');
                 $summary->getStyle('A1:M1')->getFont()->setBold(true)->setSize(16)->getColor()->setARGB('FFFFFFFF');
-                $summary->getStyle('A1:M1')->getFill()->setFillType('solid')->getStartColor()->setARGB('FF161616');
+                $summary->getStyle('A1:M1')->getFill()->setFillType('solid')->getStartColor()->setARGB('FF2563EB');
                 $summary->getRowDimension(1)->setRowHeight(36);
                 $summary->getColumnDimension('A')->setWidth(25);
                 $summary->getColumnDimension('B')->setWidth(45);
@@ -139,6 +145,7 @@ class SpreadsheetService
                     $labels = [new DataSeriesValues('String', "'Ringkasan'!\$B\$10", null, 1)];
                     $x = [new DataSeriesValues('String', "'Ringkasan'!\$A\$11:\$A\$$lastRow", null, $lastRow - 10)];
                     $y = [new DataSeriesValues('Number', "'Ringkasan'!\$B\$11:\$B\$$lastRow", null, $lastRow - 10)];
+                    $y[0]->setFillColor('2563EB');
                     $series = new DataSeries(DataSeries::TYPE_LINECHART, null, [0], $labels, $x, $y);
                     $chart = new Chart('Pendapatan', new Title('Tren Pendapatan Penjualan'), null, new PlotArea(null, [$series]), true, 'gap', new Title('Tanggal'), new Title('Pendapatan (Rp)'));
                     $chart->setTopLeftPosition('D3');
@@ -148,6 +155,30 @@ class SpreadsheetService
                 }
                 if ($context['type'] === 'penjualan' && $rows) {
                     $sheet->getStyle('E2:F'.(count($rows) + 1))->getNumberFormat()->setFormatCode('"Rp "#,##0.00');
+                }
+                $book->setActiveSheetIndex(0);
+            }
+            if ($context['raw'] ?? false) {
+                $rawSheet = $book->createSheet()->setTitle('Data Mentah');
+                foreach (array_merge([$context['raw_headers']], $context['raw_rows']) as $i => $row) {
+                    foreach ($row as $j => $value) {
+                        $rawSheet->setCellValueExplicit(Coordinate::stringFromColumnIndex($j + 1).($i + 1), $value ?? '', is_int($value) || is_float($value) ? DataType::TYPE_NUMERIC : DataType::TYPE_STRING);
+                    }
+                }
+                $rawSheet->getStyle('A1:I1')->getFill()->setFillType('solid')->getStartColor()->setARGB('FF2563EB');
+                $rawSheet->getStyle('A1:I1')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+                $rawSheet->freezePane('A2');
+                $rawSheet->setAutoFilter('A1:I'.max(1, count($context['raw_rows']) + 1));
+                foreach (range('A', 'I') as $column) {
+                    $rawSheet->getColumnDimension($column)->setWidth(25);
+                }
+            }
+            if ($context && ! ($context['detail'] ?? true)) {
+                if ($book->getSheetCount() > 1) {
+                    $book->removeSheetByIndex($book->getIndex($sheet));
+                } else {
+                    $sheet->setTitle('Laporan');
+                    $sheet->fromArray([['Tidak ada bagian laporan yang dipilih.']]);
                 }
                 $book->setActiveSheetIndex(0);
             }

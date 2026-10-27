@@ -87,11 +87,11 @@
             <h2>Rincian Validasi</h2>
             <ul class="mt-2 mb-0">
                 @foreach (array_slice($preview['errors'], 0, 100) as $error)
-                    <li class="mb-1">Baris {{ $error['baris'] }}: {{ $error['pesan'] }}</li>
+                    <li class="mb-1">Baris {{ $error['baris'] }}: {{ str_replace(';', ',', $error['pesan']) }}</li>
                 @endforeach
             </ul>
             @if (count($preview['errors']) > 100)
-                <p class="form-help">100 error pertama ditampilkan; seluruh error disimpan saat konfirmasi.</p>
+                <p class="form-help">100 error pertama ditampilkan, seluruh error disimpan saat konfirmasi.</p>
             @endif
         </section>
     @endif

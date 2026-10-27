@@ -75,13 +75,13 @@ class AnalysisService
                         $series[$month] = $observed[$month] ?? 0;
                     }
                     if (count($series) < 3) {
-                        $notes[] = $p->kode_barang.': Data tidak cukup (minimal 3 bulan lengkap; bulan kosong belum dikonfirmasi nol).';
+                        $notes[] = $p->kode_barang.': Data tidak cukup (minimal 3 bulan lengkap, bulan kosong belum dikonfirmasi nol).';
 
                         continue;
                     }
                     $forecast = $this->regression->forecast($series);
                     if ($forecast['units'] > 2147483647 || abs($forecast['raw']) >= 100000000000) {
-                        throw new DomainException('Prediksi melampaui batas numerik database; periksa data masukan.');
+                        throw new DomainException('Prediksi melampaui batas numerik database, periksa data masukan.');
                     }
                     $process->prediksi()->create(['id_barang' => $p->id_barang, 'tanggal_analisis' => now(), 'periode_prediksi' => $monthEnd->toDateString(), 'prediksi_penjualan' => number_format($forecast['raw'], 4, '.', ''), 'angka_ramalan_stok' => $forecast['units']]);
                     $evaluations[$p->kode_barang] = array_merge($forecast, ['months' => array_keys($series), 'historical' => array_values($series)]);

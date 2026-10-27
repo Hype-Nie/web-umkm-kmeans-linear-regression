@@ -36,7 +36,7 @@ class ImportController extends Controller
         Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
         $duplicate = $request->user()->impor()->where('path_file', $path)->where('jenis_data', $request->jenis_data)->whereIn('status', ['berhasil', 'parsial'])->exists();
         if ($duplicate) {
-            return back()->withErrors(['file' => 'Berkas identik sudah pernah diimpor. Gunakan file yang diperbaiki; fingerprint per baris tetap mencegah duplikasi.']);
+            return back()->withErrors(['file' => 'Berkas identik sudah pernah diimpor. Gunakan file yang diperbaiki, fingerprint per baris tetap mencegah duplikasi.']);
         }
         $history = $request->user()->impor()->create(['nama_file_asli' => $file->getClientOriginalName(), 'path_file' => $path, 'jenis_data' => $request->jenis_data, 'status' => 'diproses']);
 

@@ -77,12 +77,13 @@ class RecommendationController extends Controller
 
         $stale = $process && isset($meta['data_signature']) && $meta['data_signature'] !== $service->signature($request->user());
 
-        $items = $query->orderByRaw("CASE prioritas WHEN 'Tinggi' THEN 0 WHEN 'Sedang' THEN 1 ELSE 2 END")
+        $otherItems = (clone $query)->where('prioritas', 'Rendah')->orderBy('id_rekomendasi')->paginate(6, ['*'], 'lainnya')->withQueryString();
+        $items = $query->where('prioritas', '!=', 'Rendah')->orderByRaw("CASE prioritas WHEN 'Tinggi' THEN 0 WHEN 'Sedang' THEN 1 ELSE 2 END")
             ->orderBy('id_rekomendasi')
             ->paginate(12)
             ->withQueryString();
 
-        foreach ($items as $rec) {
+        foreach ($items->getCollection()->concat($otherItems->getCollection()) as $rec) {
             $rec->tingkat_keyakinan = number_format($calcConfidence($rec), 1) . '%';
             if ($rec->jenis_rekomendasi === 'restock') {
                 $rec->estimasi_dampak = '+' . number_format($rec->jumlah_restock_disarankan) . ' Unit Restock';
@@ -91,7 +92,7 @@ class RecommendationController extends Controller
             }
         }
 
-        return view('rekomendasi.index', compact('process', 'counts', 'stale', 'items', 'summary'));
+        return view('rekomendasi.index', compact('process', 'counts', 'stale', 'items', 'otherItems', 'summary'));
     }
 
     public function generate(Request $request, RecommendationService $service, AnalysisService $analysis)

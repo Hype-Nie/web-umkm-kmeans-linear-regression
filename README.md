@@ -146,6 +146,8 @@ Untuk mengisi data simulasi pengujian (opsional, untuk mencoba sistem secara ins
 ```bash
 php artisan db:seed
 ```
+Seeder data asli membaca berkas `resources/transaksi_gabungan.csv` dari root project menggunakan path Laravel, sehingga project dapat dipindahkan ke komputer atau server lain tanpa mengubah path di kode. Pastikan berkas tersebut sudah tersedia sebelum menjalankan `php artisan migrate:fresh --seed`.
+
 Kredensial login akun pengujian:
 - Username: admin_uji (atau email: admin.uji@example.test)
 - Password: UjiUmkm123!

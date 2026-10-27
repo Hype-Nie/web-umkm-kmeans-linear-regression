@@ -83,7 +83,7 @@
         <a href="{{ route('rekomendasi.index') }}" class="btn">Reset</a>
     </form>
 
-    @if ($items->count())
+    @if ($items->count() || $otherItems->count())
         @php
             $summary = $summary ?? [
                 'total_rekomendasi' => method_exists($items, 'total') ? $items->total() : $items->count(),
@@ -96,10 +96,7 @@
                 'avg_confidence' => $items->isNotEmpty() ? $items->first()->tingkat_keyakinan : '92.4%',
             ];
 
-            $highAndMid = $items->filter(fn($r) => in_array($r->prioritas, ['Tinggi', 'Sedang']));
-            $lowPriority = $items->filter(fn($r) => $r->prioritas === 'Rendah');
-            $showSplit = !$activePrioritas && $lowPriority->isNotEmpty();
-            $gridItems = $showSplit ? $highAndMid : $items;
+            $gridItems = $items;
         @endphp
 
         <!-- Executive Summary Card (Sorotan Strategis Agregat sesuai Gambar 3.22) -->
@@ -139,7 +136,7 @@
                     </div>
                 </div>
                 <div class="rec-footer">
-                    <span class="text-muted small">Keputusan didasarkan pada peramalan stok periode {{ $process?->tanggal_akhir_data?->addMonth()->format('m/Y') ?? 'berikutnya' }} dan kondisi stok riil gudang.</span>
+                    <span class="text-muted small">Keputusan didasarkan pada peramalan stok periode {{ $process?->tanggal_akhir_data?->copy()->addMonthNoOverflow()->format('m/Y') ?? 'berikutnya' }} dan kondisi stok riil gudang.</span>
                 </div>
             </section>
         @endif
@@ -168,7 +165,7 @@
                     </div>
 
                     <h2 class="mt-2">{{ $rec->judul }}</h2>
-                    <p class="description">{{ $rec->deskripsi }}</p>
+                    <p class="description">{{ str_replace(';', ',', $rec->deskripsi) }}</p>
 
                     <!-- Metric Boxes (Estimasi Dampak & Tingkat Keyakinan) -->
                     <div class="metrics">
@@ -220,49 +217,6 @@
             @endforeach
         </div>
 
-        <!-- Lower Priority Section (Rekomendasi Lainnya) matching Proposal Mockup -->
-        @if ($showSplit && $lowPriority->isNotEmpty())
-            <div class="rec-other-section mt-5">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <h2 class="h5 mb-0 text-muted">Rekomendasi Lainnya</h2>
-                    <div class="flex-grow-1 border-top"></div>
-                </div>
-
-                <div class="rec-other-list">
-                    @foreach ($lowPriority as $rec)
-                        @php
-                            $lowStatusBadge = match($rec->status) {
-                                'selesai' => 'badge-success',
-                                'ditinjau' => 'badge-warning',
-                                default => 'badge-primary',
-                            };
-                        @endphp
-                        <div class="card rec-other-item mb-2 p-3 d-flex flex-row align-items-center justify-content-between gap-3 flex-wrap">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="badge badge-priority-low">RENDAH</span>
-                                <div>
-                                    <strong>{{ $rec->judul }}</strong>
-                                    <p class="description mb-0 text-muted small">{{ Str::limit($rec->deskripsi, 110) }}</p>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="small text-muted">Keyakinan: <strong>{{ $rec->tingkat_keyakinan }}</strong></span>
-                                <span class="badge {{ $lowStatusBadge }}">{{ strtoupper($rec->status) }}</span>
-                                <form method="post" action="{{ route('rekomendasi.update', $rec) }}">
-                                    @csrf
-                                    @method('patch')
-                                    <input type="hidden" name="status" value="{{ $rec->status === 'selesai' ? 'baru' : 'selesai' }}">
-                                    <button class="btn btn-sm" type="submit">
-                                        {{ $rec->status === 'selesai' ? 'Buka Kembali' : 'Terapkan' }}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
         <div class="pagination-wrap mt-4">{{ $items->links() }}</div>
     @else
         <x-empty
@@ -272,13 +226,15 @@
         </x-empty>
     @endif
 
+    @include('rekomendasi.others')
+
     <details class="card mt-4">
         <summary>Aturan Rekomendasi & Prioritas</summary>
         <p class="form-help mt-3">RESTOCK = max(0, ceil(prediksi + stok minimum − stok terkini)), jika jumlah &gt; 0 dan
-            barang Sangat Laris atau stok kritis. Tinggi: stok ≤ minimum dan di bawah prediksi; Sedang: stok di bawah
-            prediksi; lainnya Rendah.</p>
+            barang Sangat Laris atau stok kritis. Tinggi: stok ≤ minimum dan di bawah prediksi, Sedang: stok di bawah
+            prediksi, lainnya Rendah.</p>
         <p class="form-help">PROMOSI dipertimbangkan jika stok &gt; 0 dan klaster Kurang atau stok &gt; 2 × (prediksi +
-            minimum), setelah aturan restock diperiksa. Tinggi: stok &gt; 2 × (prediksi + minimum); Sedang: klaster Kurang;
+            minimum), setelah aturan restock diperiksa. Tinggi: stok &gt; 2 × (prediksi + minimum), Sedang: klaster Kurang,
             lainnya Rendah. Tidak menjamin keuntungan.</p>
         <p class="form-help mb-0">Satu proses menghasilkan satu set rekomendasi yang dapat diaudit. Status ditinjau/selesai
             tidak melakukan pembelian, mengubah stok, atau mencatat penjualan. Untuk menghitung ulang berdasarkan perubahan

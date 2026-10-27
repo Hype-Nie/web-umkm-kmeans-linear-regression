@@ -13,7 +13,7 @@ class ReportService
 {
     public const TYPES = ['penjualan' => 'Ringkasan Penjualan', 'stok' => 'Posisi Stok', 'kmeans' => 'Analisis K-Means', 'prediksi' => 'Prediksi Linear Regression', 'rekomendasi' => 'Rekomendasi Keputusan'];
 
-    public function build(User $user, string $type, string $start, string $end, bool $summary = true): array
+    public function build(User $user, string $type, string $start, string $end, bool $summary = true, bool $detail = true, bool $raw = false): array
     {
         $range = [$start.' 00:00:00', $end.' 23:59:59'];
         $owner = fn ($q) => $q->where('id_user', $user->id_user);
@@ -115,12 +115,16 @@ class ReportService
                     (int) $i->ramalan_kebutuhan,
                     (int) $i->jumlah_restock_disarankan,
                     ucfirst($i->status),
-                    $i->deskripsi,
+                    str_replace(';', ',', $i->deskripsi),
                 ];
             }
             $total = count($rows) . ' rekomendasi keputusan persediaan.';
         }
 
-        return ['title' => self::TYPES[$type], 'type' => $type, 'headers' => $headers, 'rows' => $rows, 'total' => $total, 'chart' => $chart, 'start' => $start, 'end' => $end, 'shop' => $user->nama_toko, 'owner' => $user->nama_pemilik, 'generated' => now()->format('d/m/Y H:i').' WIB', 'summary' => $summary];
+        $rawHeaders = ['Kode Transaksi', 'Tanggal', 'Kode Barang', 'Nama Barang', 'Kategori', 'Jumlah Terjual', 'Harga Satuan Jual', 'Total Pendapatan', 'Sumber Data'];
+        $rawRows = $raw ? TransaksiPenjualan::whereHas('barang', $owner)->periode($start, $end)->with('barang')->orderBy('tanggal_transaksi')->get()
+            ->map(fn ($t) => [$t->kode_transaksi, $t->tanggal_transaksi->format('Y-m-d H:i:s'), $t->barang->kode_barang, $t->barang->nama_barang, $t->barang->kategori, (int) $t->jumlah_terjual, $t->harga_satuan_jual, $t->total_pendapatan, $t->sumber_data])->all() : [];
+
+        return ['title' => self::TYPES[$type], 'type' => $type, 'headers' => $headers, 'rows' => $rows, 'total' => $total, 'chart' => $chart, 'start' => $start, 'end' => $end, 'shop' => $user->nama_toko, 'owner' => $user->nama_pemilik, 'generated' => now()->format('d/m/Y H:i').' WIB', 'summary' => $summary, 'detail' => $detail, 'raw' => $raw, 'raw_headers' => $rawHeaders, 'raw_rows' => $rawRows];
     }
 }

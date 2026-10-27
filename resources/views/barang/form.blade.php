@@ -76,7 +76,7 @@
                                         <td>{{ $s->stok_sebelum ?? '—' }}</td>
                                         <td>{{ $s->perubahan_stok ?? '—' }}</td>
                                         <td><strong>{{ $s->sisa_stok }}</strong></td>
-                                        <td>{{ $s->keterangan ?: '—' }}</td>
+                                        <td>{{ str_replace(';', ',', $s->keterangan ?: '—') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

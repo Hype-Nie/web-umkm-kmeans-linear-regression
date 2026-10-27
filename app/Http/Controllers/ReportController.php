@@ -12,10 +12,10 @@ class ReportController extends Controller
 {
     private function data(PeriodeRequest $request, ReportService $service): array
     {
-        $request->validate(['jenis' => 'nullable|in:penjualan,stok,kmeans,prediksi,rekomendasi', 'format' => 'nullable|in:pdf,xlsx,csv', 'summary' => 'nullable|boolean']);
+        $request->validate(['jenis' => 'nullable|in:penjualan,stok,kmeans,prediksi,rekomendasi', 'format' => 'nullable|in:pdf,xlsx,csv', 'summary' => 'nullable|boolean', 'detail' => 'nullable|boolean', 'raw' => 'nullable|boolean']);
         [$start,$end] = $request->periode('month');
 
-        return $service->build($request->user(), $request->input('jenis', 'penjualan'), $start, $end, $request->boolean('summary', true));
+        return $service->build($request->user(), $request->input('jenis', 'penjualan'), $start, $end, $request->boolean('summary', true), $request->boolean('detail', true), $request->boolean('raw'));
     }
 
     public function index(PeriodeRequest $request, ReportService $service)

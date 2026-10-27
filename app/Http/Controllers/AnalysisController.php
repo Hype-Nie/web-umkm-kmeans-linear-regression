@@ -12,13 +12,29 @@ class AnalysisController extends Controller
 {
     public function index(Request $request, AnalysisService $service)
     {
-        $request->validate(['proses' => 'nullable|integer']);
+        $request->validate(['proses' => 'nullable|integer', 'kategori' => 'nullable|string|max:120', 'klaster' => 'nullable|in:Sangat Laris,Cukup,Kurang']);
         $process = $request->filled('proses') ? $request->user()->proses()->findOrFail($request->proses) : $request->user()->proses()->latest('id_proses')->first();
         $clusters = $process?->klaster()->with('barang')->get() ?? collect();
         $forecasts = $process?->prediksi()->with('barang')->get() ?? collect();
         $analyzedProducts = $clusters->pluck('barang')->merge($forecasts->pluck('barang'))->unique('id_barang')->values();
         $metadata = $process ? json_decode($process->catatan ?? '', true) : null;
         $stale = $process && isset($metadata['data_signature']) && $metadata['data_signature'] !== $service->signature($request->user());
+        $diagnostics = ['points' => [], 'reason' => 'Jalankan analisis terbaru untuk melihat evaluasi pembanding.'];
+        if ($process?->status === 'berhasil' && ! $stale && $process->sumber_proses === 'backend_php' && isset($metadata['data_signature'])) {
+            $diagnostics = \Illuminate\Support\Facades\Cache::remember('cluster-diagnostics-v1-'.$process->id_proses.'-'.$metadata['data_signature'], 3600, function () use ($request, $process) {
+                $products = $request->user()->barang()->with(['transaksi' => fn ($q) => $q->periode($process->tanggal_mulai_data->toDateString(), $process->tanggal_akhir_data->toDateString())])->orderBy('id_barang')->get();
+                $features = $products->map(fn ($p) => [
+                    (int) $p->transaksi->sum('jumlah_terjual'),
+                    $p->transaksi->map(fn ($t) => $t->tanggal_transaksi->format('Y-m-d').'|'.($t->kode_transaksi ?: $t->tanggal_transaksi->format('H:i:s')))->unique()->count(),
+                    (float) $p->transaksi->sum('total_pendapatan'),
+                ])->all();
+                return app(\App\Services\ClusterDiagnosticsService::class)->calculate($features);
+            });
+        }
+        $categoryMetrics = $clusters->groupBy(fn ($c) => $c->barang->kategori ?: 'Tanpa kategori')
+            ->filter(fn ($group, $category) => ! $request->filled('kategori') || mb_stripos($category, $request->kategori) !== false)
+            ->map(fn ($group) => $group->filter(fn ($c) => ! $request->filled('klaster') || $c->label_klaster === $request->klaster))
+            ->filter(fn ($group) => $group->isNotEmpty());
         $selected = $request->input('produk');
         $forecast = $selected ? $forecasts->firstWhere('id_barang', (int) $selected) : $forecasts->first();
 
@@ -27,7 +43,7 @@ class AnalysisController extends Controller
         $defaultStart = $minTrx ? \Carbon\Carbon::parse($minTrx)->startOfMonth()->toDateString() : '2024-10-01';
         $defaultEnd = $maxTrx ? \Carbon\Carbon::parse($maxTrx)->endOfMonth()->toDateString() : '2026-07-31';
 
-        return view('analisis.index', compact('process', 'clusters', 'forecasts', 'analyzedProducts', 'metadata', 'stale', 'forecast', 'defaultStart', 'defaultEnd') + ['history' => $request->user()->proses()->latest('id_proses')->paginate(8)]);
+        return view('analisis.index', compact('process', 'clusters', 'forecasts', 'analyzedProducts', 'metadata', 'stale', 'forecast', 'defaultStart', 'defaultEnd', 'diagnostics', 'categoryMetrics') + ['history' => $request->user()->proses()->latest('id_proses')->paginate(8)]);
     }
 
     public function run(Request $request, AnalysisService $service)

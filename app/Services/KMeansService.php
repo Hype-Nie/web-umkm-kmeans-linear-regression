@@ -89,7 +89,7 @@ class KMeansService
                     $groups[$cluster][] = $point;
                 }
                 if (in_array([], $groups, true)) {
-                    throw new DomainException('Terbentuk klaster kosong; variasi fitur belum mendukung 3 kelompok yang stabil.');
+                    throw new DomainException('Terbentuk klaster kosong, variasi fitur belum mendukung 3 kelompok yang stabil.');
                 }
                 $new = [];
                 foreach ($groups as $g) {

@@ -1,6 +1,14 @@
 @props(['name' => 'grid'])
 <svg {{ $attributes->class(['icon']) }} viewBox="0 0 24 24" aria-hidden="true">
     @switch($name)
+        @case('filter')
+            <path d="M3 5h18M6 12h12M10 19h4" />
+            <circle cx="8" cy="5" r="2" /><circle cx="16" cy="12" r="2" />
+        @break
+        @case('info')
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 16v-4m0-4h.01" />
+        @break
         @case('grid')
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />

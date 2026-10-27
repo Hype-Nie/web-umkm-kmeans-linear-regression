@@ -123,7 +123,7 @@ class RapidMinerService
                         $process->prediksi()->create(['id_barang' => $p->id_barang, 'tanggal_analisis' => now(), 'periode_prediksi' => $d['periode_prediksi'], 'prediksi_penjualan' => $d['prediksi_penjualan'], 'angka_ramalan_stok' => (int) ceil(max(0, (float) $d['prediksi_penjualan']))]);
                     }
                 }
-                $process->update($metrics + ['tanggal_mulai_data' => $period[0], 'tanggal_akhir_data' => $period[1], 'status' => 'berhasil', 'catatan' => json_encode(['asal' => 'Berkas hasil RapidMiner yang diunggah pengguna. Metrik diimpor sesuai berkas; pastikan evaluasi di RapidMiner memakai validasi temporal.', 'label' => 'Peringkat centroid fitur distandardisasi, bukan nomor klaster.', 'jarak' => 'Dihitung ulang dalam ruang z-score dari fitur yang diimpor.', 'data_signature' => app(AnalysisService::class)->signature($user)], JSON_UNESCAPED_UNICODE)]);
+                $process->update($metrics + ['tanggal_mulai_data' => $period[0], 'tanggal_akhir_data' => $period[1], 'status' => 'berhasil', 'catatan' => json_encode(['asal' => 'Berkas hasil RapidMiner yang diunggah pengguna. Metrik diimpor sesuai berkas, pastikan evaluasi di RapidMiner memakai validasi temporal.', 'label' => 'Peringkat centroid fitur distandardisasi, bukan nomor klaster.', 'jarak' => 'Dihitung ulang dalam ruang z-score dari fitur yang diimpor.', 'data_signature' => app(AnalysisService::class)->signature($user)], JSON_UNESCAPED_UNICODE)]);
             });
         } catch (\Throwable $e) {
             $process->update(['status' => 'gagal', 'catatan' => $e instanceof DomainException ? $e->getMessage() : 'Berkas hasil tidak dapat diproses. Periksa format dan log aplikasi.']);

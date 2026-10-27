@@ -17,7 +17,7 @@
         <div class="card-head">
             <div>
                 <h2>Jalankan Analisis SPK</h2>
-                <p class="form-help mb-0">Model K-Means Clustering ($K=3$) untuk segmentasi perputaran produk dan Linear Regression ($y = a + bx$) untuk peramalan kebutuhan stok.</p>
+                <p class="form-help mb-0">Model K-Means Clustering (K = 3) untuk segmentasi perputaran produk dan Linear Regression (y = a + bx) untuk peramalan kebutuhan stok.</p>
             </div>
         </div>
         <form method="post" action="{{ route('analisis.run') }}" data-submit-lock>
@@ -117,7 +117,7 @@
                 {{ $process->tanggal_akhir_data?->format('d/m/Y') ?? '—' }}. Algoritma: K-Means / Linear Regression.
             </p>
             @if ($process->status === 'gagal')
-                <p class="danger mt-2 mb-0">{{ $process->catatan }}</p>
+                <p class="danger mt-2 mb-0">{{ str_replace(';', ',', $process->catatan) }}</p>
             @endif
         </div>
     @endif
@@ -153,7 +153,7 @@
                 <div class="stack">
                     <section class="card">
                         <h2>Visualisasi K-Means Clustering</h2>
-                        <p class="form-help">X: jumlah unit terjual · Y: frekuensi pembelian. Setiap titik mewakili produk;
+                        <p class="form-help">X: jumlah unit terjual · Y: frekuensi pembelian. Setiap titik mewakili produk,
                             centroid ditampilkan sebagai tanda silang.</p>
                         <div class="chart-box" style="height:320px"><canvas data-chart="cluster-chart"
                                 aria-label="Scatter plot produk per klaster"></canvas></div>@php
@@ -231,6 +231,25 @@
                                 @endphp
                         <script id="cluster-chart" type="application/json">@json($clusterConfig)</script>
                     </section>
+
+                </div>
+                <aside class="insights">
+                    <h2>✧ AI Strategic Insights</h2>
+                    <p class="mt-4"><strong>Perputaran
+                            Produk</strong><br>{{ $clusters->where('label_klaster', 'Sangat Laris')->count() }} produk
+                        berada di kelompok Sangat Laris, {{ $clusters->where('label_klaster', 'Kurang')->count() }} produk
+                        berada di kelompok Kurang. Label mengikuti peringkat centroid setelah standardisasi fitur.</p>
+                    <p><strong>Kebutuhan Bulan Berikutnya</strong><br>{{ $forecasts->count() }} produk memiliki prediksi
+                        yang tersedia. Prediksi unit dibatasi minimal nol dan dibulatkan ke atas.</p>
+                    <p><strong>Dasar Keputusan</strong><br>Gabungkan klaster, prediksi, dan snapshot stok terbaru untuk
+                        menilai restock atau promosi. ROI belum dapat dihitung tanpa biaya dan asumsi promosi.</p><a
+                        class="btn btn-wide mt-3 no-print" href="{{ route('rekomendasi.index') }}">LIHAT DETAIL STRATEGI</a>
+                </aside>
+            </div>
+            @include('analisis.diagnostics')
+            <details class="analysis-details mb-4">
+                <summary>Centroid &amp; Pengelompokan Produk</summary>
+                <div class="details-content">
                     <section class="card">
                         <h2>Centroid & Jumlah Produk</h2>
                         <div class="table-wrap">
@@ -264,20 +283,6 @@
                             </table>
                         </div>
                     </section>
-                </div>
-                <aside class="insights">
-                    <h2>✧ Strategic Insights</h2>
-                    <p class="mt-4"><strong>Perputaran
-                            Produk</strong><br>{{ $clusters->where('label_klaster', 'Sangat Laris')->count() }} produk
-                        berada di kelompok Sangat Laris; {{ $clusters->where('label_klaster', 'Kurang')->count() }} produk
-                        berada di kelompok Kurang. Label mengikuti peringkat centroid setelah standardisasi fitur.</p>
-                    <p><strong>Kebutuhan Bulan Berikutnya</strong><br>{{ $forecasts->count() }} produk memiliki prediksi
-                        yang tersedia. Prediksi unit dibatasi minimal nol dan dibulatkan ke atas.</p>
-                    <p><strong>Dasar Keputusan</strong><br>Gabungkan klaster, prediksi, dan snapshot stok terbaru untuk
-                        menilai restock atau promosi. ROI belum dapat dihitung tanpa biaya dan asumsi promosi.</p><a
-                        class="btn btn-wide mt-3 no-print" href="{{ route('rekomendasi.index') }}">LIHAT DETAIL STRATEGI</a>
-                </aside>
-            </div>
             <section class="card flush mb-4">
                 <div class="card-head">
                     <div>
@@ -325,10 +330,15 @@
                     </table>
                 </div>
             </section>
+                </div>
+            </details>
         @else<div class="mb-4"><x-empty title="K-Means belum tersedia"
                     message="K=3 memerlukan minimal tiga produk dengan fitur berbeda. Hasil regresi yang memenuhi syarat tetap dapat digunakan." />
             </div>
         @endif
+        <details class="analysis-details mb-4" @if(request('produk')) open @endif>
+            <summary>Linear Regression &amp; Hasil Prediksi Kebutuhan Stok</summary>
+            <div class="details-content">
         <section class="card mb-4">
             <h2>Linear Regression · Historis & Prediksi</h2>
             @if ($forecasts->count())
@@ -464,7 +474,7 @@
                             <div class="col-md-4">
                                 <div class="p-2 border rounded" style="background:var(--surface);">
                                     <small class="text-muted d-block" style="font-size:11px;">Rata-rata Simpangan (MAE)</small>
-                                    <strong class="d-block" style="font-size:14px; color:var(--accent);">&plusmn;{{ number_format($evaluation['mae'], 1) }} Unit</strong>
+                                    <strong class="d-block" style="font-size:14px; color:var(--accent);">±{{ number_format($evaluation['mae'], 1) }} Unit</strong>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -492,7 +502,7 @@
                             </div>
                         </details>
                     </div>@else<p class="muted mt-3">Historis/model per produk tidak disertakan dalam berkas RapidMiner.
-                        Tabel berikut menampilkan nilai hasil yang diimpor; metrik proses tersedia pada rincian proses.</p>
+                        Tabel berikut menampilkan nilai hasil yang diimpor, metrik proses tersedia pada rincian proses.</p>
             @endif @else<x-empty title="Data tidak cukup untuk prediksi"
                     message="Minimal 3 bulan lengkap diperlukan. Lengkapi transaksi atau konfirmasi arti bulan kosong sebelum menjalankan ulang." />
             @endif
@@ -535,11 +545,13 @@
             <div class="alert alert-warning"><strong>Catatan Ketersediaan Model</strong>
                 <ul class="mb-0 mt-2">
                     @foreach ($metadata['peringatan'] as $note)
-                        <li>{{ $note }}</li>
+                        <li>{{ str_replace(';', ',', $note) }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
+            </div>
+        </details>
     @else<x-empty title="Analisis belum tersedia"
             message="Unggah transaksi asli, lalu jalankan analisis SPK di atas. Tidak ada klaster atau prediksi contoh yang ditampilkan." />
     @endif
@@ -570,6 +582,9 @@
             }
         @endphp
 
+        <details class="analysis-details mt-4">
+            <summary>Rincian Proses &amp; Evaluasi Model</summary>
+            <div class="details-content">
         <section class="card mt-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
@@ -626,7 +641,7 @@
                         <div class="d-flex gap-4 pt-2 border-top flex-wrap">
                             <div>
                                 <small class="text-muted d-block" style="font-size:11px;">Rata-rata Simpangan (MAE)</small>
-                                <strong style="color:var(--accent);">{{ $avgMae !== null ? '&plusmn;' . number_format($avgMae, 1) . ' Unit' : '—' }}</strong>
+                                <strong style="color:var(--accent);">{{ $avgMae !== null ? '±' . number_format($avgMae, 1) . ' Unit' : '—' }}</strong>
                             </div>
                             <div>
                                 <small class="text-muted d-block" style="font-size:11px;">Simpangan Kuadrat (RMSE)</small>
@@ -654,7 +669,7 @@
                                     <th style="width: 5%; text-align: center;">NO</th>
                                     <th>KODE</th>
                                     <th>NAMA KOMODITAS</th>
-                                    <th>TREN PENJUALAN ($b$)</th>
+                                    <th>TREN PENJUALAN (b)</th>
                                     <th style="text-align: right;">MAE</th>
                                     <th style="text-align: right;">RMSE</th>
                                     <th style="text-align: center;">STATUS</th>
@@ -683,7 +698,7 @@
                                                 <span class="text-muted">&rarr; Stabil</span>
                                             @endif
                                         </td>
-                                        <td style="text-align: right;">&plusmn;{{ number_format($e['mae'], 1, ',', '.') }} unit</td>
+                                        <td style="text-align: right;">±{{ number_format($e['mae'], 1, ',', '.') }} unit</td>
                                         <td style="text-align: right;">{{ number_format($e['rmse'], 1, ',', '.') }} unit</td>
                                         <td style="text-align: center;"><span class="badge {{ $accuracyBadge }}">{{ $accuracyLabel }}</span></td>
                                     </tr>
@@ -705,6 +720,8 @@
                 </div>
             </details>
         </section>
+            </div>
+        </details>
     @endif
     <section class="card flush mt-4 no-print">
         <div class="card-head">

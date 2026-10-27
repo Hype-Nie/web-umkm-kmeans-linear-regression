@@ -76,7 +76,7 @@
                                                     <summary class="small text-muted" style="cursor:pointer">Rincian Error</summary>
                                                     <ul class="ps-3 mt-1 small text-danger mb-0">
                                                         @foreach (array_slice($h->rincian_error, 0, 100) as $error)
-                                                            <li>Baris {{ $error['baris'] ?? '—' }}: {{ $error['pesan'] }}</li>
+                                                            <li>Baris {{ $error['baris'] ?? '—' }}: {{ str_replace(';', ',', $error['pesan']) }}</li>
                                                         @endforeach
                                                     </ul>
                                                     @if (count($h->rincian_error) > 100)
@@ -144,7 +144,7 @@
                 </div>
             </section>
             <section class="info-box">Untuk riset 24 bulan, unggah semua bagian riwayat yang tersedia. Konfirmasi
-                kelengkapan bulan pada halaman analisis; aplikasi tidak mengasumsikan bulan kosong sebagai nol tanpa
+                kelengkapan bulan pada halaman analisis, aplikasi tidak mengasumsikan bulan kosong sebagai nol tanpa
                 persetujuan.</section>
         </aside>
 </div>@endsection

@@ -10,7 +10,7 @@
                 penghapusan data.</p>
             <p>Prediksi dan rekomendasi merupakan alat bantu keputusan berdasarkan data dan asumsi yang dijelaskan. Hasil
                 tidak menjamin penjualan atau keuntungan. Tinjau kembali sebelum melakukan pembelian atau promosi.</p>
-            <p>Aset Bootstrap dan Chart.js dimuat dari jsDelivr; koneksi ke CDN mengikuti kebijakan penyedia tersebut. Data
+            <p>Aset Bootstrap dan Chart.js dimuat dari jsDelivr, koneksi ke CDN mengikuti kebijakan penyedia tersebut. Data
                 transaksi tidak dikirim ke CDN oleh aplikasi.</p><a class="btn" href="{{ route('register') }}">Kembali ke
                 pendaftaran</a>
         </article>

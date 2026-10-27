@@ -61,6 +61,88 @@ function showCustomConfirm(message, onConfirm) {
 
 // Global initialization of interactive components
 function initApp(root = document) {
+    root.querySelectorAll('details.analysis-details').forEach(details => {
+        if (details._hasChartResize) return;
+        details._hasChartResize = true;
+        details.addEventListener('toggle', () => {
+            if (details.open && typeof Chart !== 'undefined') {
+                details.querySelectorAll('canvas').forEach(canvas => Chart.getChart(canvas)?.resize());
+            }
+        });
+    });
+    root.querySelectorAll('[data-report-config]').forEach(form => {
+        if (form._hasReportPreview) return;
+        form._hasReportPreview = true;
+        let timer, controller, revision = 0;
+        const status = form.querySelector('[data-report-status]');
+        const print = form.querySelector('[data-report-print]');
+        const download = form.querySelector('[data-report-download]');
+        const params = () => {
+            const result = new URLSearchParams();
+            for (const [key, value] of new FormData(form)) result.set(key, value);
+            return result;
+        };
+        const validate = () => {
+            form.elements.akhir.min = form.elements.mulai.value;
+            return form.checkValidity();
+        };
+        const update = async () => {
+            clearTimeout(timer);
+            const current = ++revision;
+            controller?.abort();
+            print.disabled = true;
+            download.disabled = !validate();
+            if (!validate()) {
+                status.textContent = 'Lengkapi tanggal dan pastikan tanggal akhir tidak mendahului tanggal awal.';
+                return false;
+            }
+            controller = new AbortController();
+            const url = new URL(form.action);
+            url.search = params().toString();
+            status.textContent = 'Memperbarui pratinjau…';
+            const viewport = form.closest('.report-layout').querySelector('.report-viewport');
+            viewport.setAttribute('aria-busy', 'true');
+            try {
+                const response = await fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+                const next = html.querySelector('.paper');
+                if (!response.ok || !next || html.querySelector('.alert-danger')) throw new Error('preview');
+                if (current !== revision || !form.isConnected) return false;
+                viewport.querySelector('.paper').innerHTML = next.innerHTML;
+                history.replaceState(history.state, '', url);
+                pageCache.delete(url.href);
+                status.textContent = 'Pratinjau sudah diperbarui.';
+                print.disabled = false;
+                return true;
+            } catch (error) {
+                if (error.name !== 'AbortError' && current === revision && form.isConnected) status.textContent = 'Pratinjau belum diperbarui. Periksa koneksi atau ubah pilihan untuk mencoba lagi.';
+                return false;
+            } finally {
+                if (current === revision) viewport.removeAttribute('aria-busy');
+            }
+        };
+        form.addEventListener('change', () => {
+            print.disabled = true;
+            download.disabled = !validate();
+            controller?.abort();
+            revision++;
+            clearTimeout(timer);
+            timer = setTimeout(update, 250);
+        });
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!form.reportValidity()) return;
+            if (event.submitter?.hasAttribute('data-report-download')) {
+                const url = new URL(form.dataset.exportUrl);
+                url.search = params().toString();
+                window.location.assign(url);
+            } else update();
+        });
+        print.addEventListener('click', async () => {
+            if (await update()) window.print();
+        });
+    });
     // Password visibility toggles
     root.querySelectorAll('[data-password]').forEach(button => {
         if (button._hasPasswordToggle) return;
@@ -187,11 +269,21 @@ function initApp(root = document) {
     if (!window._hasBeforePrintHook) {
         window._hasBeforePrintHook = true;
         window.addEventListener('beforeprint', () => {
+            document.querySelectorAll('details.analysis-details:not([open])').forEach(details => {
+                details.dataset.openedForPrint = 'true';
+                details.open = true;
+            });
             if (typeof Chart !== 'undefined' && Chart.instances) {
                 Object.values(Chart.instances).forEach(chart => {
                     try { chart.resize(); } catch (e) {}
                 });
             }
+        });
+        window.addEventListener('afterprint', () => {
+            document.querySelectorAll('details[data-opened-for-print]').forEach(details => {
+                details.open = false;
+                delete details.dataset.openedForPrint;
+            });
         });
     }
 
@@ -228,7 +320,7 @@ function initApp(root = document) {
         if (typeof Chart === 'undefined') {
             const note = document.createElement('p');
             note.className = 'muted';
-            note.textContent = 'Grafik belum dimuat. Periksa koneksi internet; data tetap tersedia pada tabel.';
+            note.textContent = 'Grafik belum dimuat. Periksa koneksi internet, data tetap tersedia pada tabel.';
             canvas.after(note);
             return;
         }
@@ -501,7 +593,7 @@ function initSearchableSelects(root = document) {
     if (!document._hasSearchableSelectGlobalEvents) {
         document._hasSearchableSelectGlobalEvents = true;
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.searchable-select-wrap')) {
+            if (e.target instanceof Element && !e.target.closest('.searchable-select-wrap')) {
                 document.querySelectorAll('.searchable-select-wrap.active').forEach(w => {
                     w.classList.remove('active');
                     w.querySelector('.searchable-select-trigger')?.setAttribute('aria-expanded', 'false');
@@ -753,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Prefetch on hover/touch for instant 0ms page opening
     document.addEventListener('pointerenter', e => {
-        const link = e.target.closest('a');
+        const link = e.target instanceof Element ? e.target.closest('a') : null;
         if (!link) return;
         const href = link.getAttribute('href');
         if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
@@ -765,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Intercept internal link clicks for smooth seamless navigation
     document.addEventListener('click', e => {
-        const link = e.target.closest('a');
+        const link = e.target instanceof Element ? e.target.closest('a') : null;
         if (!link) return;
 
         // Skip modified clicks (new window/tab)
@@ -842,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Invalidate cache on mutations (POST, PUT, PATCH, DELETE) and preserve scroll
     document.addEventListener('submit', e => {
         const form = e.target;
+        if (e.defaultPrevented || form.hasAttribute('data-report-config')) return;
         if (form.method.toLowerCase() !== 'get') {
             try {
                 sessionStorage.setItem('spk_restore_scroll', JSON.stringify({

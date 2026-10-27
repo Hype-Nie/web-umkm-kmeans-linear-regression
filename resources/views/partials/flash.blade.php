@@ -6,14 +6,14 @@
 @endif
 @foreach (['success', 'warning'] as $kind)
     @if (session($kind))
-        <div class="alert alert-{{ $kind }}" role="status">{{ session($kind) }}</div>
+        <div class="alert alert-{{ $kind }}" role="status">{{ str_replace(';', ',', session($kind)) }}</div>
     @endif
 @endforeach
 @if ($errors->any())
     <div class="alert alert-danger" role="alert">
         <ul class="flash-list">
             @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
+                <li>{{ str_replace(';', ',', $error) }}</li>
             @endforeach
         </ul>
     </div>

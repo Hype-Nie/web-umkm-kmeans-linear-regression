@@ -40,7 +40,7 @@
                             value="{{ old('harga_satuan_jual', $item?->harga_satuan_jual) }}" data-unit-price data-price required></div>
                     <div class="field-row"><label class="field" for="total">Total Pendapatan (Rp)</label><input
                             class="form-control" id="total" value="{{ $item ? number_format($item->total_pendapatan, 2, '.', '') : '0' }}" data-total readonly tabindex="-1">
-                        <p class="form-help">Pratinjau otomatis; server menghitung ulang nilai yang disimpan.</p>
+                        <p class="form-help">Pratinjau otomatis, server menghitung ulang nilai yang disimpan.</p>
                     </div>
                 </div>
                 @if (!$item)

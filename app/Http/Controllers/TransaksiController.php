@@ -54,7 +54,7 @@ class TransaksiController extends Controller
     private function assertEditable(TransaksiPenjualan $item): void
     {
         if ($item->barang->stok()->where('sumber_data', 'penjualan')->where('keterangan', 'Transaksi #'.$item->id_transaksi)->exists()) {
-            throw ValidationException::withMessages(['transaksi' => 'Transaksi operasional terhubung riwayat stok dan dikunci untuk menjaga audit. Catat koreksi sebagai penyesuaian stok; perubahan transaksi harus melalui pencatatan koreksi historis terpisah.']);
+            throw ValidationException::withMessages(['transaksi' => 'Transaksi operasional terhubung riwayat stok dan dikunci untuk menjaga audit. Catat koreksi sebagai penyesuaian stok, perubahan transaksi harus melalui pencatatan koreksi historis terpisah.']);
         }
     }
 
