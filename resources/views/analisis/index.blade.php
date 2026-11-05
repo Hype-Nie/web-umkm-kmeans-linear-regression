@@ -680,10 +680,24 @@
                                     @php
                                         $e = $evalList[$f->barang->kode_barang] ?? null;
                                         if (!$e) continue;
-                                        $slope = $e['b'];
-                                        $maeVal = $e['mae'];
-                                        $accuracyBadge = $maeVal <= 10 ? 'badge-success' : ($maeVal <= 25 ? 'badge-info' : 'badge-warning');
-                                        $accuracyLabel = $maeVal <= 10 ? 'Akurat' : ($maeVal <= 25 ? 'Wajar' : 'Fluktuatif');
+                                        $slope = (float) ($e['b'] ?? 0.0);
+                                        $maeVal = (float) ($e['mae'] ?? 0.0);
+                                        $rmseVal = (float) ($e['rmse'] ?? 0.0);
+                                        $historical = $e['historical'] ?? [];
+                                        $avgSales = count($historical) ? (array_sum($historical) / count($historical)) : 0.0;
+                                        $mapePct = $avgSales > 0 ? min(100.0, ($maeVal / $avgSales) * 100.0) : 0.0;
+                                        $accuracyPct = max(0.0, 100.0 - $mapePct);
+
+                                        if ($accuracyPct >= 85.0) {
+                                            $accuracyBadge = 'badge-success';
+                                            $accuracyLabel = 'Sangat Baik (' . number_format($accuracyPct, 1, ',', '.') . '%)';
+                                        } elseif ($accuracyPct >= 70.0) {
+                                            $accuracyBadge = 'badge-info';
+                                            $accuracyLabel = 'Cukup Baik (' . number_format($accuracyPct, 1, ',', '.') . '%)';
+                                        } else {
+                                            $accuracyBadge = 'badge-warning';
+                                            $accuracyLabel = 'Fluktuatif (' . number_format($accuracyPct, 1, ',', '.') . '%)';
+                                        }
                                     @endphp
                                     <tr>
                                         <td style="text-align: center;">{{ $loop->iteration }}</td>
@@ -691,20 +705,33 @@
                                         <td><strong>{{ $f->barang->nama_barang }}</strong></td>
                                         <td>
                                             @if ($slope > 0.1)
-                                                <span class="text-success">&uarr; Naik (+{{ number_format($slope, 2, ',', '.') }})</span>
+                                                <span class="text-success">&uarr; Naik (+{{ number_format($slope, 2, ',', '.') }} unit/bln)</span>
                                             @elseif ($slope < -0.1)
-                                                <span class="text-warning">&darr; Turun ({{ number_format($slope, 2, ',', '.') }})</span>
+                                                <span class="text-warning">&darr; Turun ({{ number_format($slope, 2, ',', '.') }} unit/bln)</span>
                                             @else
                                                 <span class="text-muted">&rarr; Stabil</span>
                                             @endif
                                         </td>
-                                        <td style="text-align: right;">±{{ number_format($e['mae'], 1, ',', '.') }} unit</td>
-                                        <td style="text-align: right;">{{ number_format($e['rmse'], 1, ',', '.') }} unit</td>
+                                        <td style="text-align: right;">±{{ number_format($maeVal, 1, ',', '.') }} unit</td>
+                                        <td style="text-align: right;">{{ number_format($rmseVal, 1, ',', '.') }} unit</td>
                                         <td style="text-align: center;"><span class="badge {{ $accuracyBadge }}">{{ $accuracyLabel }}</span></td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                    </div>
+                    <div class="mt-2 p-2 bg-light border rounded small text-muted">
+                        <strong class="d-block mb-1" style="font-size:12px; color:#374151;">Panduan Membaca Tabel Evaluasi Model:</strong>
+                        <ul class="mb-0 ps-3" style="font-size:11.5px; line-height: 1.6;">
+                            <li><strong>Tren Penjualan (b):</strong> Menggambarkan arah permintaan per bulan. <em>Naik</em> berarti rata-rata penjualan bertambah setiap bulan, <em>Turun</em> berarti melandai, dan <em>Stabil</em> berarti relatif datar.</li>
+                            <li><strong>MAE (Mean Absolute Error):</strong> Rata-rata selisih melesetnya tebakan model dalam satuan unit barang dibanding data asli.</li>
+                            <li><strong>RMSE (Root Mean Squared Error):</strong> Ukuran galat kuadratik yang lebih sensitif jika terjadi lonjakan penjualan ekstrem (misal saat hari raya).</li>
+                            <li><strong>Status Akurasi:</strong> Dinilai dari persentase akurasi model (100% - persentase galat):
+                                <span class="badge badge-success">Sangat Baik (≥85%)</span> pola permintaan linier teratur;
+                                <span class="badge badge-info">Cukup Baik (70–84%)</span> pola wajar;
+                                <span class="badge badge-warning">Fluktuatif (&lt;70%)</span> pola bergelombang atau musiman.
+                            </li>
+                        </ul>
                     </div>
                 </div>
             @endif

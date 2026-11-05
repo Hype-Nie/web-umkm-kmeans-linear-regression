@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\AnalysisService;
 use App\Services\RapidMinerService;
 use App\Services\SpreadsheetService;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -49,9 +50,13 @@ class AnalysisController extends Controller
     public function run(Request $request, AnalysisService $service)
     {
         $data = $request->validate(['mulai' => 'required|date_format:Y-m-d', 'akhir' => 'required|date_format:Y-m-d|after_or_equal:mulai|before_or_equal:today', 'complete' => 'nullable|boolean']);
-        $process = $service->run($request->user(), $data['mulai'], $data['akhir'], $request->boolean('complete'));
+        try {
+            $process = $service->run($request->user(), $data['mulai'], $data['akhir'], $request->boolean('complete'));
 
-        return redirect()->route('analisis.index', ['proses' => $process->id_proses])->with($process->status === 'berhasil' ? 'success' : 'warning', $process->status === 'berhasil' ? 'Analisis tersimpan. Periksa cakupan prediksi per produk.' : 'Analisis belum berhasil. Lihat alasan pada riwayat proses.');
+            return redirect()->route('analisis.index', ['proses' => $process->id_proses])->with($process->status === 'berhasil' ? 'success' : 'warning', $process->status === 'berhasil' ? 'Analisis tersimpan. Periksa cakupan prediksi per produk.' : 'Analisis belum berhasil. Lihat alasan pada riwayat proses.');
+        } catch (DomainException $e) {
+            return back()->withErrors(['analisis' => $e->getMessage()])->withInput();
+        }
     }
 
     public function rapidminer(Request $request, SpreadsheetService $sheets, RapidMinerService $service)

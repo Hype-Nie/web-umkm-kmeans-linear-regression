@@ -3,27 +3,63 @@
 namespace App\Services;
 
 use DomainException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 class RegressionService
 {
+    private function hitPythonApi(string $endpoint, array $payload): array
+    {
+        $apiUrl = config('services.ml.base_url', env('PYTHON_ML_API_URL', 'http://127.0.0.1:8000'));
+        try {
+            $response = Http::timeout(3.0)->post("{$apiUrl}{$endpoint}", $payload);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (is_array($data) && ($data['status'] ?? '') === 'success') {
+                    return $data;
+                }
+            }
+
+            throw new DomainException(
+                'Layanan Machine Learning Python mengembalikan respons tidak valid: '.
+                ($response->body() ?: 'Kode HTTP '.$response->status())
+            );
+        } catch (ConnectionException) {
+            throw new DomainException(
+                "Server Machine Learning Python belum aktif di {$apiUrl}. ".
+                "Silakan jalankan perintah 'python finals/script/ml_api.py' di terminal sebelum melakukan analisis."
+            );
+        } catch (\Throwable $e) {
+            if ($e instanceof DomainException) {
+                throw $e;
+            }
+            throw new DomainException(
+                "Gagal menghubungkan ke Server Machine Learning Python ({$apiUrl}): ".$e->getMessage().
+                '. Pastikan server Python telah aktif.'
+            );
+        }
+    }
+
     public function fit(array $y): array
     {
         $n = count($y);
         if ($n < 2) {
             throw new DomainException('Regresi memerlukan minimal 2 titik waktu.');
         }
-        $xMean = ($n + 1) / 2;
-        $yMean = array_sum($y) / $n;
-        $numerator = 0;
-        $denominator = 0;
-        foreach (array_values($y) as $i => $value) {
-            $numerator += (($i + 1) - $xMean) * ($value - $yMean);
-            $denominator += (($i + 1) - $xMean) ** 2;
-        }
-        $b = $numerator / $denominator;
-        $a = $yMean - $b * $xMean;
 
-        return ['a' => $a, 'b' => $b, 'raw' => $a + $b * ($n + 1)];
+        // Inferensi parameter garis regresi linear via API Python
+        $endpoint = config('services.ml.endpoints.regression_predict', env('ML_API_REGRESSION_PREDICT_ENDPOINT', '/predict/linear-regression'));
+        $res = $this->hitPythonApi($endpoint, [
+            'series' => array_values($y),
+        ]);
+
+        return [
+            'a' => (float) $res['intercept'],
+            'b' => (float) $res['slope'],
+            'raw' => (float) $res['raw_prediction'],
+            'source' => 'python_ml_api',
+        ];
     }
 
     public function forecast(array $series): array
@@ -31,20 +67,26 @@ class RegressionService
         if (count($series) < 3) {
             throw new DomainException('Data tidak cukup: minimal 3 bulan lengkap untuk model dan evaluasi bergulir.');
         }
-        $values = array_values($series);
-        $fit = $this->fit($values);
-        $errors = [];
-        $actual = [];
-        for ($i = 2; $i < count($values); $i++) {
-            $prediction = max(0, $this->fit(array_slice($values, 0, $i))['raw']);
-            $errors[] = $prediction - $values[$i];
-            $actual[] = $values[$i];
-        }
-        $mse = array_sum(array_map(fn ($e) => $e * $e, $errors)) / count($errors);
-        $mae = array_sum(array_map('abs', $errors)) / count($errors);
-        $mean = array_sum($actual) / count($actual);
-        $sst = array_sum(array_map(fn ($v) => ($v - $mean) ** 2, $actual));
 
-        return $fit + ['units' => (int) ceil(max(0, $fit['raw'])), 'mse' => $mse, 'rmse' => sqrt($mse), 'mae' => $mae, 'r_squared' => count($actual) > 1 && $sst > 0 ? 1 - array_sum(array_map(fn ($e) => $e * $e, $errors)) / $sst : null, 'validation_points' => count($errors), 'validation_predictions' => array_map(fn ($i) => $actual[$i] + $errors[$i], array_keys($actual)), 'validation_actual' => $actual];
+        // Peramalan dan evaluasi regresi linear via API Python
+        $endpoint = config('services.ml.endpoints.regression_forecast', env('ML_API_REGRESSION_FORECAST_ENDPOINT', '/forecast/linear-regression'));
+        $res = $this->hitPythonApi($endpoint, [
+            'series' => array_values($series),
+        ]);
+
+        return [
+            'a' => (float) $res['a'],
+            'b' => (float) $res['b'],
+            'raw' => (float) $res['raw'],
+            'units' => (int) $res['units'],
+            'mse' => (float) $res['mse'],
+            'rmse' => (float) $res['rmse'],
+            'mae' => (float) $res['mae'],
+            'r_squared' => $res['r_squared'] !== null ? (float) $res['r_squared'] : null,
+            'validation_points' => (int) $res['validation_points'],
+            'validation_predictions' => $res['validation_predictions'],
+            'validation_actual' => $res['validation_actual'],
+            'source' => 'python_ml_api',
+        ];
     }
 }
